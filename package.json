@@ -22,6 +22,10 @@
       {
         "command": "compact-console-log.insertlog",
         "title": "Insert Log"
+      },
+      {
+        "command": "compact-console-log.reset",
+        "title": "Reset Copmact Console Log"
       }
     ],
     "keybindings": [
