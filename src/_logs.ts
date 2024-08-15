@@ -1,4 +1,7 @@
-import { ExtensionContext, Position, Range, TextEditor, TextEditorDecorationType, window } from "vscode";
+import { ExtensionContext, Position, Range, Selection, TextEditor, TextEditorDecorationType, window } from "vscode";
+import { v4 as uuid4 } from "uuid";
+
+const comment = `/* Loading Compact Console Log - Do not modify this line */`;
 
 class Log {
     // Private static
@@ -19,14 +22,28 @@ class Log {
     private constructor(private originalText: string, private line: number, private _start: number, private _end: number, private textEditor: TextEditor) {
     }
 
+    // tmp
+    public lengths: number[] = [];
+
     private async setCode() {
         if (this.decoration) {
             throw new Error(`Can't change code after decoration is set`);
         }
 
-        const prefix = `/* Loading Compact Console Log - Do not modify this line */ (() => { console.log("📢", "\\x1b[90m${this.line + 1}:\\x1b[36m", ${JSON.stringify(this.originalText)}, "\\x1b[90m=>\\x1b[0m", ${this.originalText}); return `;
-        const suffix = `; })() /* Loading Compact Console Log - Do not modify this line */`;
-        const newText = `${prefix}${this.originalText}${suffix}`;
+
+        const id = `/* ID |${uuid4()}| ID */`
+        const parts = [
+            `${comment}${id}(() => { console.log("📢", "\\x1b[90m${this.line + 1}:\\x1b[36m", `,
+            JSON.stringify(this.originalText),
+            `, "\\x1b[90m=>\\x1b[0m", `,
+            this.originalText,
+            `); return `,
+            this.originalText,
+            `; })()${comment}`,
+        ]
+
+        const newText = parts.join("");
+        this.lengths = parts.map(part => part.length);
 
         const range = new Range(this.start, this.end);
 
@@ -38,13 +55,15 @@ class Log {
     }
 
     private setDecoration() {
-        const range = new Range(this.start, this.end);
+        // const range = new Range(this.start, this.end);
 
-        const decoration = Log.createTextEditorDecorationType(this.originalText);
+        // const decoration = Log.createTextEditorDecorationType(this.originalText);
 
-        this.textEditor.setDecorations(decoration, [range]);
+        // this.textEditor.setDecorations(decoration, [range]);
 
-        this.decoration = decoration;
+        // this.decoration = decoration;
+
+        this.decoration = { dispose: () => {} } as any;
     };
 
     // Public instance
@@ -146,6 +165,44 @@ export class LogsManager {
         });
 
         this.save();
+    }
+
+    moveSelection(selection: Selection) {
+        const text = this.textEditor.document.getText().split("\n");
+
+        for (let line = 0; line < text.length; line++) {
+            const splittedComments = text[line].split(comment);
+
+            let charIndex = 0;
+
+            for (let i = 0; i < splittedComments.length; i++) {
+                if (i % 2 === 0) {
+                    charIndex += splittedComments[i].length;
+                    continue;
+                }
+
+                const id = splittedComments[i].split("|")[1];
+
+                // const logData = this.context.globalState.get<any>(id);
+                // const { prefixLength, suffixLength } = logData;
+
+                const log = LogsManager.logs.find(log => log.range.intersection(selection));                
+
+                if (log) {
+                    console.log("here");                   
+                    const selection1 = new Selection(new Position(line, charIndex + log.lengths[0]), new Position(line, charIndex + log.lengths[0]));
+                    const selection2 = new Selection(new Position(line, charIndex + log.lengths[0] + log.lengths[1] + log.lengths[2]), new Position(line, charIndex + log.lengths[0] + log.lengths[1] + log.lengths[2]));
+                    const selection3 = new Selection(new Position(line, charIndex + log.lengths[0] + log.lengths[1] + log.lengths[2] + log.lengths[3] + log.lengths[4]), new Position(line, charIndex + log.lengths[0] + log.lengths[1] + log.lengths[2] + log.lengths[3] + log.lengths[4]));
+
+                    if (!selection1.intersection(selection)) {
+                        this.textEditor.selections = [selection1, selection2, selection3];
+                        return;
+                    }
+                    console.log("here2");                   
+    
+                }
+            }
+        }
     }
 
     private save() {

@@ -1,72 +1,167 @@
-import * as vscode from 'vscode';
-import { LogsManager } from './logs';
+import { commands, ExtensionContext, Range, Selection, TextEditorDecorationType, window, workspace } from "vscode";
+import { getUpdatedRanges } from "vscode-position-tracking";
 
-export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "compact-console-log" is now active!');
+let logsData: {
+    allRange: Range,
+    varTextRange: Range,
+    logTextRange: Range,
+    hiddenDecoration: TextEditorDecorationType,
+    visualDecoration: TextEditorDecorationType,
+}[] = [];
 
-	(() => {
-		const editor = vscode.window.activeTextEditor;
+export function activate(context: ExtensionContext) {
+    context.subscriptions.push(
+        commands.registerTextEditorCommand('compact-console-log.insertlog', (textEditor, edit) => {
+            let range: Range = textEditor.selection;
 
-		if (!editor) {
-			return;
-		}
+            if (range.isEmpty) {
+                const word = textEditor.document.getWordRangeAtPosition(range.start);
 
-		LogsManager.with(context, editor).reload();
-	})();
+                if (!word) {
+                    window.showErrorMessage('Please select a single word');
+                    return;
+                }
 
-	const disposableActiveTextEditor = vscode.window.onDidChangeActiveTextEditor((textEditor) => {
-		if (!textEditor) {
-			return;
-		}
+                range = word;
+            }
 
-		LogsManager.with(context, textEditor).reload();
-	});
+            if (range.start.line !== range.end.line) {
+                window.showErrorMessage('Please select a single line');
+                return;
+            }
 
-	const disposableChangeText = vscode.workspace.onDidChangeTextDocument((event) => {
-		const editor = vscode.window.activeTextEditor;
+            const line = range.start.line;
+            const text = textEditor.document.getText(range);
 
-		if (!editor) {
-			return;
-		}
+            let partsLengths: number[] = [];
 
-		event.contentChanges.forEach(({ text, rangeLength, range }) => {
-			if (text !== '' || rangeLength === 0) {
-				return;
-			}
+            textEditor.edit(edit => {
+                const parts = [
+                    `(() => { const tmp = `,
+                    text,
+                    `; console.log("📢", "\\x1b[90m${line + 1}:\\x1b[36m", `,
+                    JSON.stringify(text),
+                    `, "\\x1b[90m=>\\x1b[0m", tmp); return tmp;})()`,
+                ]
 
-			LogsManager.with(context, editor).delete(range, rangeLength);
-		});
-	});
+                edit.replace(range, parts.join(""));
 
-	context.subscriptions.push(
-		disposableActiveTextEditor,
-		disposableChangeText,
-		vscode.commands.registerTextEditorCommand('compact-console-log.insertlog', (textEditor, edit) => {
-			let range: vscode.Range = textEditor.selection;
+                partsLengths = parts.map(part => part.length);
+            }).then(() => {
+                const decPrefixLength = partsLengths[0];
+                const decSuffixLength = partsLengths[2] + partsLengths[3] + partsLengths[4];
 
-			if (range.isEmpty) {
-				const word = textEditor.document.getWordRangeAtPosition(range.start);
+                const decPrefixRange = new Range(range.start, range.start.translate(0, decPrefixLength));
+                const decSuffixRange = new Range(range.start.translate(0, decPrefixLength + text.length), range.start.translate(0, decPrefixLength + text.length + decSuffixLength));
 
-				if (!word) {
-					vscode.window.showErrorMessage('Please select a single word');
-					return;
-				}
+                const hiddenDecoration = window.createTextEditorDecorationType({
+                    letterSpacing: '-1em',
+                    opacity: '0',
+                });
+                textEditor.setDecorations(hiddenDecoration, [decPrefixRange, decSuffixRange]);
 
-				range = word;
-			}
+                const textRange = new Range(range.start.translate(0, decPrefixLength), range.start.translate(0, decPrefixLength + text.length));
 
-			if (range.start.line !== range.end.line) {
-				vscode.window.showErrorMessage('Please select a single line');
-				return;
-			}
+                const visualDecoration = window.createTextEditorDecorationType({
+                    backgroundColor: 'rgba(190, 30, 30, 0.1)',
+                    color: "cyan",
+                    fontWeight: "bold",
+                    before: {
+                        backgroundColor: 'rgba(190, 30, 30, 0.1)',
+                        contentText: `📢`,
+                    }
+                });
+                textEditor.setDecorations(visualDecoration, [textRange]);
 
-			const line = range.start.line;
-			const text = textEditor.document.getText(range);
+                logsData.push({
+                    allRange: new Range(range.start, range.start.translate(0, decPrefixLength + text.length + decSuffixLength)),
+                    varTextRange: textRange,
+                    logTextRange: new Range(range.start.translate(0, partsLengths[0] + partsLengths[1] + partsLengths[2]), range.start.translate(0, partsLengths[0] + partsLengths[1] + partsLengths[2] + partsLengths[3])),
+                    hiddenDecoration,
+                    visualDecoration,
+                });
+            });
+        }),
+        workspace.onDidChangeTextDocument((event) => {
+            logsData = logsData.map(data => {
+                const [allRanges, varTextRange, logTextRange] = getUpdatedRanges([data.allRange, data.varTextRange, data.logTextRange], event.contentChanges as any);                
 
-			LogsManager.with(context, textEditor).create(line, range.start.character, range.end.character, text);
-		}),
-	);
+                console.log("Ranges", allRanges, varTextRange, logTextRange);
+                
+                if (logTextRange === undefined) {       
+                    console.log("Got undefined");
+                                 
+                    const editor = window.activeTextEditor;
+
+                    if (editor) {                        
+                        editor.edit(edit => {
+                            edit.delete(allRanges);
+                        }).then(() => {
+                            data.hiddenDecoration.dispose();
+                            data.visualDecoration.dispose();
+                        });
+                        return undefined;
+                    }
+
+                    console.log("Got err");
+                    
+                    throw new Error("Text changed without any editor. This is unexpected.");
+                }
+
+                const currLogText = event.document.getText(logTextRange);
+                const stringifiedVar = JSON.stringify(event.document.getText(varTextRange));
+                
+                console.log(currLogText, stringifiedVar);
+
+                if (currLogText !== stringifiedVar) {
+                    console.log("replacing");
+                    
+                    const editor = window.activeTextEditor;
+
+                    if (editor) {
+                        editor.edit(edit => {
+                            edit.insert(logTextRange.end.translate(0, -1), stringifiedVar.slice(0, -1));
+                            edit.delete(logTextRange.with(undefined, logTextRange.end.translate(0, -1)));
+                        });
+                    }
+                }
+
+                return {
+                    ...data,
+                    allRanges,
+                    varTextRange,
+                    logTextRange,
+                };
+            }).filter(v => v !== undefined);
+        }),
+        window.onDidChangeTextEditorSelection(event => {
+            // Handle later
+            if (event.selections.length > 1) {
+                return;
+            }
+
+            const selection = event.selections[0];
+
+            const range = logsData.find(range => range.allRange.intersection(selection) && !range.varTextRange.intersection(selection));
+
+            if (!range) {
+                return;
+            }
+
+            const textRange = range.varTextRange;
+
+            const editor = window.activeTextEditor;
+
+            if (!editor) {
+                return;
+            }
+
+            if (selection.start.isBeforeOrEqual(textRange.start)) {
+                editor.selection = new Selection(textRange.start, textRange.start);
+            }
+            else {
+                editor.selection = new Selection(textRange.end, textRange.end);
+            }
+        }),
+    );
 }
-
-// This method is called when your extension is deactivated
-export function deactivate() { }
