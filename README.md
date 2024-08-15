@@ -13,6 +13,10 @@ CCL (Compact Console Log) is a VSCode extension that provides an easy way to deb
 
 ![DemoConsole](https://i.imgur.com/m417L5k.gif "DemoConsole")
 
+## Installation
+
+You can install the extension from the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=ibentimor.compact-console-log).
+
 ## Example
 
 Let's understand how it works with an example:

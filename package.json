@@ -3,6 +3,10 @@
   "publisher": "ibentimor",
   "displayName": "Compact Console Log",
   "description": "An easy and intuitive way to use console.log in JavaScript and TypeScript projects",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BenTimor/Compact-Console-Log"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.92.0"
@@ -40,7 +44,8 @@
     "pretest": "pnpm run compile && pnpm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test",
-    "package": "pnpm vsce package --no-dependencies"
+    "package": "pnpm vsce package --no-dependencies",
+    "publish": "pnpm vsce publish --no-dependencies"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
