@@ -1,17 +1,161 @@
-import { commands, ExtensionContext, Range, Selection, TextEditorDecorationType, window, workspace } from "vscode";
-import { getUpdatedRanges } from "vscode-position-tracking";
+import { commands, ExtensionContext, Position, Range, Selection, TextEditorDecorationType, window, workspace } from "vscode";
+import { v4 as uuid4 } from "uuid";
 
-let logsData: {
-    allRange: Range,
-    varTextRange: Range,
-    logTextRange: Range,
+let logs: Record<string, {
     hiddenDecoration: TextEditorDecorationType,
     visualDecoration: TextEditorDecorationType,
-}[] = [];
+}> = {};
+
+const allComment = `/* CCLI */`;
+const varComment = `/* CCLI_VAR */`;
+const lineComment = `/* CCLI_LINE */`;
+const stringifyComment = `/* CCLI_STRINGIFY */`;
+
+function getRangeOfArrayElement(array: any[], index: number, line: number, splitString: string, startAt: number = 0, includeSplits = false): Range {
+    let start = startAt;
+
+    for (let i = 0; i < index; i++) {
+        start += array[i].length + splitString.length;
+    }
+
+    let end = start + array[index].length;
+
+    if (includeSplits) {
+        start -= splitString.length;
+        end += splitString.length;
+    }
+
+    return new Range(new Position(line, start), new Position(line, end));
+}
+
+function splitRangeByRange(range: Range, splitRange: Range): Range[] {
+    const ranges: Range[] = [];
+
+    if (range.start.isBefore(splitRange.start)) {
+        ranges.push(new Range(range.start, splitRange.start));
+    }
+
+    if (range.end.isAfter(splitRange.end)) {
+        ranges.push(new Range(splitRange.end, range.end));
+    }
+
+    return ranges;
+}
+
+function stringifyVar(varText: string): string {
+    return JSON.stringify(varText.trim());
+}
+
+type LogData = {
+    range: Range,
+    varRange: Range,
+    stringifyRange: Range,
+    lineRange: Range,
+    var: string,
+    stringify: string,
+    line: string,
+    id: string,
+    varParts: string[],
+    stringifyParts: string[],
+    lineParts: string[],
+};
+
+function extractLogsDataFromLine(lineNumber: number): LogData[] {
+    const line = window.activeTextEditor?.document.lineAt(lineNumber).text;
+
+    if (!line?.includes(allComment)) {
+        return [];
+    }
+
+    let results: LogData[] = [];
+    const parts = line.split(allComment);
+
+    for (let i = 1; i < parts.length; i += 2) {
+        const logText = parts[i];
+
+        const varParts = logText.split(varComment);
+        const stringifyParts = logText.split(stringifyComment);
+        const lineParts = logText.split(lineComment);
+        const idParts = logText.split('|');
+
+        const range = getRangeOfArrayElement(parts, i, lineNumber, allComment, 0, true);
+
+        const start = range.start.character + allComment.length;
+
+        results.push({
+            range,
+            varRange: getRangeOfArrayElement(varParts, 1, lineNumber, varComment, start),
+            stringifyRange: getRangeOfArrayElement(stringifyParts, 1, lineNumber, stringifyComment, start),
+            lineRange: getRangeOfArrayElement(lineParts, 1, lineNumber, lineComment, start),
+            var: varParts[1],
+            stringify: stringifyParts[1],
+            line: lineParts[1],
+            id: idParts[1],
+            varParts,
+            stringifyParts,
+            lineParts,
+        });
+    }
+
+    return results;
+}
+
+function decorateLog(logData: LogData) {
+    const [decPrefixRange, decSuffixRange] = splitRangeByRange(logData.range, logData.varRange);
+
+    const hiddenDecoration = window.createTextEditorDecorationType({
+        letterSpacing: '-1em',
+        opacity: '0',
+    });
+    const visualDecoration = window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(190, 30, 30, 0.1)',
+        color: "cyan",
+        fontWeight: "bold",
+        before: {
+            backgroundColor: 'rgba(190, 30, 30, 0.1)',
+            contentText: `📢`,
+        }
+    });
+
+    const textEditor = window.activeTextEditor;
+
+    if (!textEditor) {
+        console.error('No active editor');
+        return;
+    }
+
+    textEditor.setDecorations(hiddenDecoration, [decPrefixRange, decSuffixRange]);
+    textEditor.setDecorations(visualDecoration, [logData.varRange]);
+
+    logs[logData.id] = {
+        hiddenDecoration,
+        visualDecoration,
+    };
+}
+
+function decorateFile() {
+    const textEditor = window.activeTextEditor;
+
+    if (!textEditor) {
+        return;
+    }
+
+    const document = textEditor.document;
+
+    for (let lineNumber = 0; lineNumber < document.lineCount; lineNumber++) {
+        const logsData = extractLogsDataFromLine(lineNumber);
+
+        logsData.forEach(logData => {
+            decorateLog(logData);
+        });
+    }
+}
 
 export function activate(context: ExtensionContext) {
+    decorateFile();
+
     context.subscriptions.push(
-        commands.registerTextEditorCommand('compact-console-log.insertlog', (textEditor, edit) => {
+        commands.registerTextEditorCommand('compact-console-log.togglelog', (textEditor, edit) => {
             let range: Range = textEditor.selection;
 
             if (range.isEmpty) {
@@ -31,137 +175,117 @@ export function activate(context: ExtensionContext) {
             }
 
             const line = range.start.line;
+
+            const logsData = extractLogsDataFromLine(line);
+
+            const logData = logsData.find(logData => logData.range.intersection(range));
+
+            if (logData) {
+                logs[logData.id].hiddenDecoration.dispose();
+                logs[logData.id].visualDecoration.dispose();
+
+                textEditor.edit(edit => {
+                    edit.replace(logData.range, logData.var.slice(1, -1));
+                }).then(() => {
+                    delete logs[logData.id];
+                });
+
+                return;
+            }
+
             const text = textEditor.document.getText(range);
 
-            let partsLengths: number[] = [];
+            const id = uuid4();
+
+            const logText = `${allComment}/* Anything in between the comments CCLI are used internally by Compact Console Log VSCode extension. Please do not modify this content directly without using the extension */ /* |${id}| */ (() => { const tmp = ${varComment} ${text} ${varComment}; console.log("📢\\x1b[90m", ${lineComment}"${line + 1}:"${lineComment}, "\\x1b[36m\\x1b[1m", ${stringifyComment}${stringifyVar(text)}${stringifyComment}, "\\x1b[0m\\x1b[90m=>\\x1b[0m", tmp); return tmp;})()${allComment}`;
 
             textEditor.edit(edit => {
-                const parts = [
-                    `(() => { const tmp = `,
-                    text,
-                    `; console.log("📢", "\\x1b[90m${line + 1}:\\x1b[36m", `,
-                    JSON.stringify(text),
-                    `, "\\x1b[90m=>\\x1b[0m", tmp); return tmp;})()`,
-                ]
-
-                edit.replace(range, parts.join(""));
-
-                partsLengths = parts.map(part => part.length);
+                edit.replace(range, logText);
             }).then(() => {
-                const decPrefixLength = partsLengths[0];
-                const decSuffixLength = partsLengths[2] + partsLengths[3] + partsLengths[4];
+                const logsData = extractLogsDataFromLine(line);
+                const logData = logsData.find(logData => logData.id === id);
 
-                const decPrefixRange = new Range(range.start, range.start.translate(0, decPrefixLength));
-                const decSuffixRange = new Range(range.start.translate(0, decPrefixLength + text.length), range.start.translate(0, decPrefixLength + text.length + decSuffixLength));
+                if (!logData) {
+                    throw new Error('Could not find log data');
+                }
 
-                const hiddenDecoration = window.createTextEditorDecorationType({
-                    letterSpacing: '-1em',
-                    opacity: '0',
-                });
-                textEditor.setDecorations(hiddenDecoration, [decPrefixRange, decSuffixRange]);
-
-                const textRange = new Range(range.start.translate(0, decPrefixLength), range.start.translate(0, decPrefixLength + text.length));
-
-                const visualDecoration = window.createTextEditorDecorationType({
-                    backgroundColor: 'rgba(190, 30, 30, 0.1)',
-                    color: "cyan",
-                    fontWeight: "bold",
-                    before: {
-                        backgroundColor: 'rgba(190, 30, 30, 0.1)',
-                        contentText: `📢`,
-                    }
-                });
-                textEditor.setDecorations(visualDecoration, [textRange]);
-
-                logsData.push({
-                    allRange: new Range(range.start, range.start.translate(0, decPrefixLength + text.length + decSuffixLength)),
-                    varTextRange: textRange,
-                    logTextRange: new Range(range.start.translate(0, partsLengths[0] + partsLengths[1] + partsLengths[2]), range.start.translate(0, partsLengths[0] + partsLengths[1] + partsLengths[2] + partsLengths[3])),
-                    hiddenDecoration,
-                    visualDecoration,
-                });
+                decorateLog(logData);
             });
         }),
         workspace.onDidChangeTextDocument((event) => {
-            logsData = logsData.map(data => {
-                const [allRanges, varTextRange, logTextRange] = getUpdatedRanges([data.allRange, data.varTextRange, data.logTextRange], event.contentChanges as any);                
+            const documentLines = event.document.getText().split('\n');
 
-                console.log("Ranges", allRanges, varTextRange, logTextRange);
-                
-                if (logTextRange === undefined) {       
-                    console.log("Got undefined");
-                                 
+            for (let lineNumber = 0; lineNumber < documentLines.length; lineNumber++) {
+                const logsData = extractLogsDataFromLine(lineNumber);
+
+                logsData.forEach(logData => {
+                    const stringifiedVar = stringifyVar(logData.var);
+
                     const editor = window.activeTextEditor;
 
-                    if (editor) {                        
-                        editor.edit(edit => {
-                            edit.delete(allRanges);
-                        }).then(() => {
-                            data.hiddenDecoration.dispose();
-                            data.visualDecoration.dispose();
-                        });
-                        return undefined;
+                    if (!editor) {
+                        console.error('No active editor');
+                        return;
                     }
 
-                    console.log("Got err");
-                    
-                    throw new Error("Text changed without any editor. This is unexpected.");
-                }
+                    editor.edit(edit => {
+                        if (logData.stringify !== stringifiedVar) {
+                            edit.replace(logData.stringifyRange, stringifiedVar);
+                        }
 
-                const currLogText = event.document.getText(logTextRange);
-                const stringifiedVar = JSON.stringify(event.document.getText(varTextRange));
-                
-                console.log(currLogText, stringifiedVar);
+                        const lineText = `"${lineNumber + 1}:"`;
 
-                if (currLogText !== stringifiedVar) {
-                    console.log("replacing");
-                    
-                    const editor = window.activeTextEditor;
+                        if (logData.line !== lineText) {
+                            edit.replace(logData.lineRange, lineText);
+                        }
+                    });
 
-                    if (editor) {
-                        editor.edit(edit => {
-                            edit.insert(logTextRange.end.translate(0, -1), stringifiedVar.slice(0, -1));
-                            edit.delete(logTextRange.with(undefined, logTextRange.end.translate(0, -1)));
-                        });
-                    }
-                }
-
-                return {
-                    ...data,
-                    allRanges,
-                    varTextRange,
-                    logTextRange,
-                };
-            }).filter(v => v !== undefined);
+                });
+            }
         }),
         window.onDidChangeTextEditorSelection(event => {
-            // Handle later
-            if (event.selections.length > 1) {
-                return;
+            let shouldUpdateSelections = false;
+
+            const selections = event.selections.map(selection => {
+                // TODO: Handle later
+                if (selection.start.line !== selection.end.line) {
+                    return selection;
+                }
+
+                const line = selection.start.line;
+
+                const logsData = extractLogsDataFromLine(line);
+
+                const results: Selection[] = [];
+
+                logsData.forEach(logData => {
+                    if (logData.range.intersection(selection)) {
+                        if (selection.start.isBeforeOrEqual(logData.varRange.start) && selection.end.isAfterOrEqual(logData.varRange.end)) {
+                            results.push(new Selection(logData.varRange.start.translate(0, 1), logData.varRange.end.translate(0, -1)));
+                            shouldUpdateSelections = true;
+                        }
+                        else if (selection.start.isBeforeOrEqual(logData.varRange.start)) {
+                            results.push(new Selection(logData.varRange.start.translate(0, 1), selection.end));
+                            shouldUpdateSelections = true;
+                        }
+                        else if (selection.end.isAfterOrEqual(logData.varRange.end)) {
+                            results.push(new Selection(selection.start, logData.varRange.end.translate(0, -1)));
+                            shouldUpdateSelections = true;
+                        }
+                    }
+                });
+
+                return results;
+            }).flat();
+
+            const editor = event.textEditor;
+
+            if (editor && selections.length && shouldUpdateSelections) {
+                editor.selections = selections;
             }
-
-            const selection = event.selections[0];
-
-            const range = logsData.find(range => range.allRange.intersection(selection) && !range.varTextRange.intersection(selection));
-
-            if (!range) {
-                return;
-            }
-
-            const textRange = range.varTextRange;
-
-            const editor = window.activeTextEditor;
-
-            if (!editor) {
-                return;
-            }
-
-            if (selection.start.isBeforeOrEqual(textRange.start)) {
-                editor.selection = new Selection(textRange.start, textRange.start);
-            }
-            else {
-                editor.selection = new Selection(textRange.end, textRange.end);
-            }
+        }),
+        window.onDidChangeActiveTextEditor(() => {
+            decorateFile();
         }),
     );
 }

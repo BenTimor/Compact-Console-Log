@@ -20,17 +20,13 @@
   "contributes": {
     "commands": [
       {
-        "command": "compact-console-log.insertlog",
-        "title": "Insert Log"
-      },
-      {
-        "command": "compact-console-log.reset",
-        "title": "Reset Copmact Console Log"
+        "command": "compact-console-log.togglelog",
+        "title": "Toggle Log"
       }
     ],
     "keybindings": [
       {
-        "command": "compact-console-log.insertlog",
+        "command": "compact-console-log.togglelog",
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l",
         "when": "editorTextFocus"
