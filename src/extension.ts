@@ -247,14 +247,14 @@ export function activate(context: ExtensionContext) {
             let shouldUpdateSelections = false;
 
             const selections = event.selections.map(selection => {
-                // TODO: Handle later
-                if (selection.start.line !== selection.end.line) {
-                    return selection;
+                const firstLine = selection.start.line;
+                const lastLine = selection.end.line;
+
+                let logsData: LogData[] = [];
+
+                for (let lineNumber = firstLine; lineNumber <= lastLine; lineNumber++) {
+                    logsData = logsData.concat(extractLogsDataFromLine(lineNumber));
                 }
-
-                const line = selection.start.line;
-
-                const logsData = extractLogsDataFromLine(line);
 
                 const results: Selection[] = [];
 
