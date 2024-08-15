@@ -21,7 +21,7 @@
     "commands": [
       {
         "command": "compact-console-log.togglelog",
-        "title": "Toggle Log"
+        "title": "Insert Log"
       }
     ],
     "keybindings": [
@@ -55,7 +55,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "uuid": "^10.0.0",
-    "vscode-position-tracking": "^0.1.0"
+    "uuid": "^10.0.0"
   }
 }
