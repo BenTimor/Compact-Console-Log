@@ -72,6 +72,14 @@ export function decorateLog(logData: LogData) {
         return;
     }
 
+    if (!decPrefixRange || !decSuffixRange) {
+        console.error('No prefix or suffix range', {
+            decPrefixRange,
+            decSuffixRange,
+        });
+        return;
+    }
+
     textEditor.setDecorations(hiddenDecoration, [decPrefixRange, decSuffixRange]);
     textEditor.setDecorations(visualDecoration, [logData.varRange]);
 

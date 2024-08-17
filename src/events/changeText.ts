@@ -1,6 +1,6 @@
 import { workspace, window } from "vscode";
 import { extractLogsDataFromLine, stringifyVar } from "../utils/logs";
-import { logs } from "../store";
+import { flags, logs } from "../store";
 
 export const changeText = workspace.onDidChangeTextDocument((event) => {
     const documentLines = event.document.getText().split('\n');
@@ -23,6 +23,7 @@ export const changeText = workspace.onDidChangeTextDocument((event) => {
             editor.edit(edit => {
                 // In case of deleting a char while the log is empty
                 if (logData.var.length < 2) {
+                    flags.enableSelectionEvent = false;
                     edit.delete(logData.range);
                     logs[logData.id].hiddenDecoration.dispose();
                     logs[logData.id].visualDecoration.dispose();
@@ -39,6 +40,8 @@ export const changeText = workspace.onDidChangeTextDocument((event) => {
                 if (logData.line !== lineText) {
                     edit.replace(logData.lineRange, lineText);
                 }
+            }).then(() => {
+                flags.enableSelectionEvent = true;
             });
 
         });

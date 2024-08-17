@@ -17,15 +17,15 @@ export function getRangeOfArrayElement(array: any[], index: number, line: number
     return new Range(new Position(line, start), new Position(line, end));
 }
 
-export function splitRangeByRange(range: Range, splitRange: Range): Range[] {
-    const ranges: Range[] = [];
+export function splitRangeByRange(range: Range, splitRange: Range): (Range | undefined)[] {
+    const ranges: (Range | undefined)[] = [undefined, undefined];
 
     if (range.start.isBefore(splitRange.start)) {
-        ranges.push(new Range(range.start, splitRange.start));
+        ranges[0] = new Range(range.start, splitRange.start);
     }
 
     if (range.end.isAfter(splitRange.end)) {
-        ranges.push(new Range(splitRange.end, range.end));
+        ranges[1] = new Range(splitRange.end, range.end);
     }
 
     return ranges;

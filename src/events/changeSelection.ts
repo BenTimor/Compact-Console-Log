@@ -1,8 +1,13 @@
 import { window, Selection } from "vscode";
 import { LogData } from "../types";
 import { extractLogsDataFromLine } from "../utils/logs";
+import { flags } from "../store";
 
 export const changeSelectionDisposable = window.onDidChangeTextEditorSelection(event => {
+    if (!flags.enableSelectionEvent) {
+        return;
+    }
+
     let shouldUpdateSelections = false;
 
     const selections = event.selections.map(selection => {
