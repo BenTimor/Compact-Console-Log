@@ -48,17 +48,9 @@ export const changeText = workspace.onDidChangeTextDocument((event) => {
     Object.keys(logs).forEach(logId => {
         if (!checkedLogs.has(logId)) {
             const logData = logs[logId];
-            const editor = window.activeTextEditor;
 
-            if (!editor) {
-                console.error('No active editor');
-                return;
-            }
-
-            editor.edit(edit => {
-                logData.hiddenDecoration.dispose();
-                logData.visualDecoration.dispose();
-            });
+            logData.hiddenDecoration.dispose();
+            logData.visualDecoration.dispose();
 
             delete logs[logId];
         }
