@@ -1,13 +1,14 @@
-# Compact Console Log
 
-CCL (Compact Console Log) is a VSCode extension that provides an easy way to debug your JavaScript and TypeScript code by logging data to the console.
+# Compact Console Log (CCL)
 
-## TL;DR
+CCL (Compact Console Log) is a Visual Studio Code extension designed to simplify debugging in JavaScript and TypeScript by streamlining console logging.
 
-1. Select the code you want to log.
-2. Press `Ctrl + Shift + L` to log the selected code to the console.
-3. Run your code and look at the console.
-4. Press `Ctrl + Shift + L` on the logged data to remove the log.
+## Quick Overview
+
+1. Highlight the code you want to log.
+2. Press `Ctrl + Shift + L` to log your selected code to the console.
+3. Execute your code and observe the output in the console.
+4. To remove the log, just press `Ctrl + Shift + L` on the logged statement.
 
 ![DemoVSCode](https://i.imgur.com/iLPfCOs.gif "DemoVSCode")
 
@@ -15,11 +16,11 @@ CCL (Compact Console Log) is a VSCode extension that provides an easy way to deb
 
 ## Installation
 
-You can install the extension from the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=ibentimor.compact-console-log).
+You can easily install this extension from the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=ibentimor.compact-console-log).
 
-## Example
+## Usage Example
 
-Let's understand how it works with an example:
+Here’s a simple example to illustrate how CCL works:
 
 ```javascript
 function add(a, b) {
@@ -33,12 +34,11 @@ console.log(numbers1.map(([a, b]) => add(a, b)).reduce((a, b) => a + b));
 const numbers2 = [[7, 8], [9, 10], [11, 12]];
 
 console.log(numbers2.map(([a, b]) => add(a, b)).reduce((a, b) => a + b));
-
 ```
 
-Oh no! We have a bug! We expect the outputs to be `21` and `57` but the actual outputs are both `-3`. We believe that the `add` function is the culprit and we want to check our assumption. 
+Oops! We seem to have a bug. We expect the outputs to be `21` and `57`, but instead, we’re getting `-3` for both. It appears that our `add` function is malfunctioning, and we need to investigate.
 
-Without CCL, we would have to add a `console.log` statement to each one of the map functions and log the value returned by the `add` function. 
+Without CCL, we would have to manually insert `console.log` statements in each mapping function to track the return value of `add`.
 
 ```javascript
 function add(a, b) {
@@ -60,14 +60,13 @@ console.log(numbers2.map(([a, b]) => {
     console.log("2", result);
     return result;
 }).reduce((a, b) => a + b));
-
 ```
 
-We look at our console and see that our `add` function is returning `-1` every time. We realize that we made a mistake in the `add` function and we should have used the `+` operator instead of the `-` operator. 
+Upon checking the console output, we can see that our `add` function consistently returns `-1`. This leads us to discover that we mistakenly used the `-` operator instead of `+`.
 
-But look how much code we had to write just to debug the `add` function! Don't forget that we need to remove these `console.log` statements once we are done debugging. What a pain!
+However, consider how much additional code we wrote just to debug this! Plus, we’ll need to remember to clean up those `console.log` statements afterward—what a hassle!
 
-With CCL, we can simply select the `add` function and press `Ctrl + Shift + L` to log the return value of the function to the console. Then it looks something like that: 
+With CCL, we can simply select the `add` function and press `Ctrl + Shift + L` to log its return value easily. This is what it looks like:
 
 ```javascript
 function add(a, b) {
@@ -76,14 +75,14 @@ function add(a, b) {
 
 const numbers1 = [[1, 2], [3, 4], [5, 6]];
 
-console.log(numbers1.map(([a, b]) => 📢 add(a, b) ).reduce((a, b) => a + b));
+console.log(numbers1.map(([a, b]) => 📢 add(a, b)).reduce((a, b) => a + b));
 
 const numbers2 = [[7, 8], [9, 10], [11, 12]];
 
-console.log(numbers2.map(([a, b]) => 📢 add(a, b) ).reduce((a, b) => a + b));
-
+console.log(numbers2.map(([a, b]) => 📢 add(a, b)).reduce((a, b) => a + b));
 ```
 
-Now we run the code and look at the console. Once again, we see that the `add` function is returning `-1` every time. Once we are done debugging, we can simply put our cursor on the logged data and press `Ctrl + Shift + L` to remove the log.
+After running the code again and checking the console, we observe the `add` function still returns `-1`. Once we finish debugging, it’s a breeze to remove the log—we just place the cursor over the logged output and hit `Ctrl + Shift + L` again.
 
-P.S. How can we distinguish between the two logs? The `📢` emoji and the line number are added to the colorful log. So we never get confused in our debugging.
+### P.S. 
+To differentiate between various logs, the `📢` emoji along with the line number is appended to the colorful log, ensuring you won’t get confused during debugging.
