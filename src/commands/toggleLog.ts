@@ -3,6 +3,7 @@ import { allComment, varComment, lineComment, stringifyComment } from "../consta
 import { logs } from "../store";
 import { extractLogsDataFromLine, stringifyVar, decorateLog } from "../utils/logs";
 import { v4 as uuid4 } from "uuid";
+import { version } from "../../package.json";
 
 export const toggleLogDisposable = commands.registerTextEditorCommand('compact-console-log.togglelog', (textEditor, edit) => {
     let range: Range = textEditor.selection;
@@ -46,7 +47,12 @@ export const toggleLogDisposable = commands.registerTextEditorCommand('compact-c
 
     const id = uuid4();
 
-    const logText = `${allComment}/* Anything in between the comments CCLI are used internally by Compact Console Log VSCode extension. Please do not modify this content directly without using the extension */ /* |${id}| */ (() => { const tmp = ${varComment} ${text} ${varComment}; console.log("📢\\x1b[90m", ${lineComment}"${line + 1}:"${lineComment}, "\\x1b[36m\\x1b[1m", ${stringifyComment}${stringifyVar(text)}${stringifyComment}, "\\x1b[0m\\x1b[90m=>\\x1b[0m", tmp); return tmp;})()${allComment}`;
+    const language = textEditor.document.languageId;
+
+    const typeSafeVar = language === 'typescript' || language === 'typescriptreact' ? "(tmp as any)" : "tmp";
+    const typeSafeRes = language === 'typescript' || language === 'typescriptreact' ? "(res: any)" : "res";
+
+    const logText = `${allComment}/* Anything in between the comments CCLI are used internally by Compact Console Log VSCode extension. Please do not modify this content directly without using the extension */ /* |${id}|${version}| */ (() => { const tmp = ${varComment} ${text} ${varComment}; const lineLog = ${lineComment}"${line + 1}:"${lineComment}; const stringifyLog = ${stringifyComment}${stringifyVar(text)}${stringifyComment}; (${typeSafeVar} instanceof Promise) ? ${typeSafeVar}.then(${typeSafeRes} => console.log("📢\\x1b[90m", lineLog, "\\x1b[36m\\x1b[1m", stringifyLog, "\\x1b[0m\\x1b[90m=>\\x1b[0m", res)) : console.log("📢\\x1b[90m", lineLog, "\\x1b[36m\\x1b[1m", stringifyLog, "\\x1b[0m\\x1b[90m=>\\x1b[0m", tmp); return tmp;})()${allComment}`;
 
     textEditor.edit(edit => {
         edit.replace(range, logText);
