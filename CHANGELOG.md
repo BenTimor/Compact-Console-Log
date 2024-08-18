@@ -33,3 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Changelog
 - Improved README.md
 - Icon
+
+## [0.1.1] - 2024-08-18
+
+### Fixed
+
+- Issue with decorating logs on file changes.
