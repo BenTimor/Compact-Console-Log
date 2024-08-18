@@ -2,8 +2,24 @@
 
 All notable changes to the "compact-console-log" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
-## [Unreleased]
+## [0.0.1] - 2024-08-15
 
 - Initial release
+
+### Added
+
+- Added compact console log feature
+
+## [0.0.2] - 2024-08-17
+
+### Added
+
+- Removing logs using CTRL + Z and similar deletion features.
+- Removing logs using backspace key.
+
+### Fixed
+
+- Text selection issues when removing logs.
+- Safety issue with splitting ranges.

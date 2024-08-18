@@ -3,6 +3,7 @@
   "publisher": "ibentimor",
   "displayName": "Compact Console Log",
   "description": "An easy and intuitive way to use console.log in JavaScript and TypeScript projects",
+  "icon": "assets/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/BenTimor/Compact-Console-Log"
