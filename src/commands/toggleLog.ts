@@ -56,14 +56,5 @@ export const toggleLogDisposable = commands.registerTextEditorCommand('compact-c
 
     textEditor.edit(edit => {
         edit.replace(range, logText);
-    }).then(() => {
-        const logsData = extractLogsDataFromLine(line);
-        const logData = logsData.find(logData => logData.id === id);
-
-        if (!logData) {
-            throw new Error('Could not find log data');
-        }
-
-        decorateLog(logData);
     });
 });

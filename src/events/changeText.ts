@@ -1,5 +1,5 @@
 import { workspace, window } from "vscode";
-import { extractLogsDataFromLine, stringifyVar } from "../utils/logs";
+import { decorateLog, extractLogsDataFromLine, stringifyVar } from "../utils/logs";
 import { flags, logs } from "../store";
 
 export const changeText = workspace.onDidChangeTextDocument((event) => {
@@ -17,6 +17,11 @@ export const changeText = workspace.onDidChangeTextDocument((event) => {
 
             if (!editor) {
                 console.error('No active editor');
+                return;
+            }
+
+            if (!logs[logData.id]) {
+                decorateLog(logData);
                 return;
             }
 
@@ -40,10 +45,12 @@ export const changeText = workspace.onDidChangeTextDocument((event) => {
                 if (logData.line !== lineText) {
                     edit.replace(logData.lineRange, lineText);
                 }
+            }, {
+                undoStopAfter: false,
+                undoStopBefore: false,
             }).then(() => {
                 flags.enableSelectionEvent = true;
             });
-
         });
     }
 
