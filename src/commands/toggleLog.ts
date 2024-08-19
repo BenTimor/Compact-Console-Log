@@ -8,6 +8,23 @@ import { version } from "../../package.json";
 export const toggleLogDisposable = commands.registerTextEditorCommand('compact-console-log.togglelog', (textEditor, edit) => {
     let range: Range = textEditor.selection;
 
+    const logsData = extractLogsDataFromLine(range.start.line);
+
+    const logData = logsData.find(logData => logData.range.intersection(range));
+
+    if (logData) {
+        logs[logData.id].hiddenDecoration.dispose();
+        logs[logData.id].visualDecoration.dispose();
+
+        textEditor.edit(edit => {
+            edit.replace(logData.range, logData.var.slice(1, -1));
+        }).then(() => {
+            delete logs[logData.id];
+        });
+
+        return;
+    }
+
     if (range.isEmpty) {
         const word = textEditor.document.getWordRangeAtPosition(range.start);
 
@@ -25,23 +42,6 @@ export const toggleLogDisposable = commands.registerTextEditorCommand('compact-c
     }
 
     const line = range.start.line;
-
-    const logsData = extractLogsDataFromLine(line);
-
-    const logData = logsData.find(logData => logData.range.intersection(range));
-
-    if (logData) {
-        logs[logData.id].hiddenDecoration.dispose();
-        logs[logData.id].visualDecoration.dispose();
-
-        textEditor.edit(edit => {
-            edit.replace(logData.range, logData.var.slice(1, -1));
-        }).then(() => {
-            delete logs[logData.id];
-        });
-
-        return;
-    }
 
     const text = textEditor.document.getText(range);
 
