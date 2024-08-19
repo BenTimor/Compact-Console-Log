@@ -1,7 +1,7 @@
 import { commands, Range, window } from "vscode";
 import { allComment, varComment, lineComment, stringifyComment } from "../constants";
 import { logs } from "../store";
-import { extractLogsDataFromLine, stringifyVar, decorateLog } from "../utils/logs";
+import { extractLogsDataFromLine, stringifyVar } from "../utils/logs";
 import { v4 as uuid4 } from "uuid";
 import { version } from "../../package.json";
 
