@@ -39,3 +39,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - Issue with decorating logs on file changes.
+
+## [0.1.2] - 2024-08-19
+
+### Fixed
+
+- Readme shortcut

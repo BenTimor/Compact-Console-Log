@@ -6,9 +6,9 @@ CCL (Compact Console Log) is a Visual Studio Code extension designed to simplify
 ## Quick Overview
 
 1. Highlight the code you want to log.
-2. Press `Ctrl + Shift + L` to log your selected code to the console.
+2. Press `Ctrl + Alt + L` to log your selected code to the console.
 3. Execute your code and observe the output in the console.
-4. To remove the log, just press `Ctrl + Shift + L` on the logged statement.
+4. To remove the log, just press `Ctrl + Alt + L` on the logged statement.
 
 ![DemoVSCode](https://i.imgur.com/iLPfCOs.gif "DemoVSCode")
 
@@ -66,7 +66,7 @@ Upon checking the console output, we can see that our `add` function consistentl
 
 However, consider how much additional code we wrote just to debug this! Plus, we’ll need to remember to clean up those `console.log` statements afterward—what a hassle!
 
-With CCL, we can simply select the `add` function and press `Ctrl + Shift + L` to log its return value easily. This is what it looks like:
+With CCL, we can simply select the `add` function and press `Ctrl + Alt + L` to log its return value easily. This is what it looks like:
 
 ```javascript
 function add(a, b) {
@@ -82,7 +82,7 @@ const numbers2 = [[7, 8], [9, 10], [11, 12]];
 console.log(numbers2.map(([a, b]) => 📢 add(a, b)).reduce((a, b) => a + b));
 ```
 
-After running the code again and checking the console, we observe the `add` function still returns `-1`. Once we finish debugging, it’s a breeze to remove the log—we just place the cursor over the logged output and hit `Ctrl + Shift + L` again.
+After running the code again and checking the console, we observe the `add` function still returns `-1`. Once we finish debugging, it’s a breeze to remove the log—we just place the cursor over the logged output and hit `Ctrl + Alt + L` again.
 
 ### P.S. 
 To differentiate between various logs, the `📢` emoji along with the line number is appended to the colorful log, ensuring you won’t get confused during debugging.
