@@ -106,3 +106,22 @@ export function decorateFile() {
         });
     }
 }
+
+export function forLogs(callback: (logData: LogData, lineNumber: number) => void) {
+    const textEditor = window.activeTextEditor;
+
+    if (!textEditor) {
+        console.error('No active editor');
+        return;
+    }
+
+    const documentLines = textEditor.document.getText().split('\n');
+
+    for (let lineNumber = 0; lineNumber < documentLines.length; lineNumber++) {
+        const logsData = extractLogsDataFromLine(lineNumber);
+
+        logsData.forEach(logData => {
+            callback(logData, lineNumber);
+        });
+    }
+}

@@ -52,3 +52,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - CTRL + Z issues
 - Untoggle logs with invalid characters
+
+## [0.2.0] - 2024-08-19
+
+### Added
+
+- Clear all logs command
+
+### Changed
+
+- Updated README.md
