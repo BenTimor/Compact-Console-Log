@@ -45,3 +45,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - Readme shortcut
+
+## [0.1.3] - 2024-08-19
+
+### Fixed
+
+- CTRL + Z issues
+- Untoggle logs with invalid characters
